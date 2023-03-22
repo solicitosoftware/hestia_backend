@@ -36,5 +36,5 @@ jobs:
           application_name: Hestia-integration
           environment_name: Hestiaintegration-env
           version_label: "${{ steps.format-time.outputs.replaced }}"
-          region: us-east-1
+          region: us-east-2
           deployment_package: deploy.zip
