@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// API healt check
+Route::get('/hcheck', function () {
+    return response('OK', 200);
 });
+

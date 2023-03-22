@@ -16,3 +16,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// WEB health check
+Route::get('/hcheck', function () {
+    return response('OK', 200);
+});
