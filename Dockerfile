@@ -4,7 +4,7 @@ ARG WWWGROUP
 ARG NODE_VERSION=18
 ARG POSTGRES_VERSION=14
 
-WORKDIR /var/www/html
+WORKDIR /var/www
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV TZ=UTC
@@ -37,6 +37,7 @@ RUN apt-get update \
     && apt-get install -y yarn \
     && apt-get install -y mysql-client \
     && apt-get install -y postgresql-client-$POSTGRES_VERSION \
+    && apt-get install -y nginx \
     && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -46,12 +47,19 @@ RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.2
 RUN groupadd -g 1000 www
 RUN useradd -u 1000 -ms /bin/bash -g www www
 
+COPY --chown=www:www-data . /var/www
+
+RUN chmod -R ug+w /var/www/storage
+
 COPY docker/start-container /usr/local/bin/start-container
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/supervisord.conf /etc/supervisord.conf
 COPY docker/php.ini /etc/php/8.2/cli/conf.d/99-sail.ini
 COPY docker/nginx.conf /etc/nginx/sites-enabled/default
 RUN chmod +x /usr/local/bin/start-container
 
+RUN composer install --optimize-autoloader --no-dev
+RUN chmod +x /var/www/docker/run.sh
+
 EXPOSE 80
 
-ENTRYPOINT ["start-container"]
+ENTRYPOINT ["/var/www/docker/run.sh"]
