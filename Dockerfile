@@ -49,8 +49,9 @@ RUN useradd -u 1000 -ms /bin/bash -g www www
 COPY docker/start-container /usr/local/bin/start-container
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/php.ini /etc/php/8.2/cli/conf.d/99-sail.ini
+COPY docker/nginx.conf /etc/nginx/sites-enabled/default
 RUN chmod +x /usr/local/bin/start-container
 
-EXPOSE 8000
+EXPOSE 80
 
 ENTRYPOINT ["start-container"]
