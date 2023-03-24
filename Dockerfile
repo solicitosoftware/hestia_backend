@@ -1,20 +1,16 @@
-FROM php:8.2-fpm
+FROM ubuntu:22.04
 
 ARG WWWGROUP
 ARG NODE_VERSION=18
 ARG POSTGRES_VERSION=14
 
-# Set working directory
-WORKDIR /var/www
+WORKDIR /var/www/html
 
-# Add docker php ext repo
-ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+ENV DEBIAN_FRONTEND noninteractive
+ENV TZ=UTC
 
-# Install php extensions
-RUN chmod +x /usr/local/bin/install-php-extensions && sync && \
-    install-php-extensions mbstring pdo_mysql zip exif pcntl gd memcached
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Install dependencies
 RUN apt-get update \
     && apt-get install -y gnupg gosu curl ca-certificates zip unzip git supervisor sqlite3 libcap2-bin libpng-dev python2 dnsutils \
     && curl -sS 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x14aa40ec0831756756d7f66c4f4ea0aae5267a6c' | gpg --dearmor | tee /etc/apt/keyrings/ppa_ondrej_php.gpg > /dev/null \
@@ -38,7 +34,6 @@ RUN apt-get update \
     && curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | tee /etc/apt/keyrings/pgdg.gpg >/dev/null \
     && echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt jammy-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y nginx \
     && apt-get install -y yarn \
     && apt-get install -y mysql-client \
     && apt-get install -y postgresql-client-$POSTGRES_VERSION \
@@ -46,40 +41,26 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install supervisor
-RUN apt-get install -y supervisor
-
-# Install composer
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.2
 
 # Add user for laravel application
 RUN groupadd -g 1000 www
 RUN useradd -u 1000 -ms /bin/bash -g www www
 
 # Copy code to /var/www
-COPY --chown=www:www-data . /var/www
+COPY --chown=www:www-data . /var/www/html
 
 # add root to www group
-RUN chmod -R ug+w /var/www/storage
+RUN chmod -R ug+w /var/www/html/storage
 
-# Copy nginx/php/supervisor configs
-RUN cp docker/supervisor.conf /etc/supervisord.conf
-RUN cp docker/php.ini /usr/local/etc/php/conf.d/app.ini
-RUN cp docker/nginx.conf /etc/nginx/sites-enabled/default
+# RUN groupadd --force -g $WWWGROUP sail
+# RUN useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail
 
-# PHP Error Log Files
-RUN mkdir /var/log/php
-RUN touch /var/log/php/errors.log && chmod 777 /var/log/php/errors.log
+COPY docker/start-container /usr/local/bin/start-container
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/php.ini /etc/php/8.2/cli/conf.d/php.ini
+RUN chmod +x /usr/local/bin/start-container
 
-# Laravel log file
-RUN touch /var/www/storage/logs/laravel.log && chmod 777 /var/www/storage/logs/laravel.log
+EXPOSE 8000
 
-# Deployment steps
-RUN composer install --optimize-autoloader --no-dev
-RUN chmod +x /var/www/docker/run.sh
-
-EXPOSE 80
-ENTRYPOINT ["/var/www/docker/run.sh"]
+ENTRYPOINT ["start-container"]
