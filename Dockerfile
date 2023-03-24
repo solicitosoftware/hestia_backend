@@ -57,7 +57,7 @@ RUN chmod -R ug+w /var/www/html/storage
 # RUN useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail
 
 COPY docker/start-container /usr/local/bin/start-container
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/supervisor.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/php.ini /etc/php/8.2/cli/conf.d/php.ini
 RUN chmod +x /usr/local/bin/start-container
 
