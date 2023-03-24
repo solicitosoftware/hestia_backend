@@ -4,7 +4,7 @@ ARG WWWGROUP
 ARG NODE_VERSION=18
 ARG POSTGRES_VERSION=14
 
-WORKDIR /var/www
+WORKDIR /var/www/html
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV TZ=UTC
@@ -42,31 +42,15 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.2
-# Add user for laravel application
-RUN groupadd -g 1000 www
-RUN useradd -u 1000 -ms /bin/bash -g www www
 
-# Copy code to /var/www
-COPY --chown=www:www-data . /var/www
+RUN groupadd --force -g $WWWGROUP sail
+RUN useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail
 
-# add root to www group
-RUN chmod -R ug+w /var/www/storage
+COPY docker/start-container /usr/local/bin/start-container
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/php.ini /etc/php/8.2/cli/conf.d/99-sail.ini
+RUN chmod +x /usr/local/bin/start-container
 
-# Copy nginx/php/supervisor configs
-RUN cp docker/supervisor.conf /etc/supervisord.conf
-RUN cp docker/php.ini /usr/local/etc/php/conf.d/app.ini
-RUN cp docker/nginx.conf /etc/nginx/sites-enabled/default
+EXPOSE 8000
 
-# PHP Error Log Files
-RUN mkdir /var/log/php
-RUN touch /var/log/php/errors.log && chmod 777 /var/log/php/errors.log
-
-# Laravel log file
-RUN touch /var/www/storage/logs/laravel.log && chmod 777 /var/www/storage/logs/laravel.log
-
-# Deployment steps
-RUN composer install --optimize-autoloader --no-dev
-RUN chmod +x /var/www/docker/run.sh
-
-EXPOSE 80
-ENTRYPOINT ["/var/www/docker/run.sh"]
+ENTRYPOINT ["start-container"]
