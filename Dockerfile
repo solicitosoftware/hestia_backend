@@ -1,4 +1,8 @@
-FROM php:8.0-fpm
+FROM php:8.2-fpm
+
+ARG WWWGROUP
+ARG NODE_VERSION=18
+ARG POSTGRES_VERSION=14
 
 # Set working directory
 WORKDIR /var/www
